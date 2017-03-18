@@ -26,7 +26,10 @@ import pykversion
 import pygame
 import os
 import sys
-import pygst, gst
+import gi
+gi.require_version('Gst', '1.0')
+gi.require_version('Gtk', '3.0')
+from gi.repository import GObject, Gst, Gtk
 
 # Python 2.3 and newer ship with optparse; older Python releases need "Optik"
 # installed (optik.sourceforge.net)
@@ -37,6 +40,9 @@ except:
 
 if env == ENV_GP2X:
     import _cpuctrl as cpuctrl
+
+GObject.threads_init()
+Gst.init(None)
 
 class pykManager:
 
@@ -63,22 +69,34 @@ class pykManager:
         self.Mixer = None
         self.KeyShift = 0
         self.Tempo = 1.00
-        self.Music = gst.Pipeline("player")
-        self.volume = gst.element_factory_make('volume')
-        self.pitcher = gst.element_factory_make("pitch")
-        #self.tempoer = gst.element_factory_make('scaletempo', 'scaletempo')
+        self.Music = Gst.Pipeline()
+        self.volume = Gst.ElementFactory.make('volume', )
+        self.pitcher = Gst.ElementFactory.make("pitch")
+        #self.tempoer = Gst.element_factory_make('scaletempo', 'scaletempo')
 
-        source = gst.element_factory_make("filesrc", "file-source")
-        decoder = gst.element_factory_make("mad", "mp3-decoder")
-        conv1 = gst.element_factory_make("audioconvert", "converter")
-        #conv2 = gst.element_factory_make ("audioconvert", "converter2")
-        resample = gst.element_factory_make ("audioresample", "audioresample")
-        sink = gst.element_factory_make("autoaudiosink")
+        source = Gst.ElementFactory.make("filesrc", "file-source")
+        decoder = Gst.ElementFactory.make("mad", "mp3-decoder")
+        conv1 = Gst.ElementFactory.make("audioconvert", "converter")
+        #conv2 = Gst.element_factory_make ("audioconvert", "converter2")
+        resample = Gst.ElementFactory.make ("audioresample", "audioresample")
+        sink = Gst.ElementFactory.make("autoaudiosink")
 
         #self.Music.add(source, decoder, conv1, self.tempoer, conv2, resample, self.pitcher, sink)
-        #gst.element_link_many(source, decoder, conv1, self.tempoer, conv2, resample, self.pitcher, sink)
-        self.Music.add(source, decoder, self.volume, conv1, self.pitcher, resample, sink)
-        gst.element_link_many(source, decoder, self.volume, conv1, self.pitcher, resample, sink)
+        #Gst.element_link_many(source, decoder, conv1, self.tempoer, conv2, resample, self.pitcher, sink)
+        self.Music.add(source)
+        self.Music.add(decoder)
+        self.Music.add(self.volume)
+        self.Music.add(conv1)
+        self.Music.add(self.pitcher)
+        self.Music.add(resample)
+        self.Music.add(sink)
+        
+        source.link(decoder)
+        decoder.link(self.volume)
+        self.volume.link(conv1)
+        conv1.link(self.pitcher)
+        self.pitcher.link(resample)
+        resample.link(sink)
 
         #bus = self.Music.get_bus()
         #bus.add_signal_watch()
@@ -111,10 +129,10 @@ class pykManager:
 
     def on_MusicMsg(self, bus, message):
         t = message.type
-        if t == gst.MESSAGE_EOS:
-            self.Music.set_state(gst.STATE_NULL)
-        elif t == gst.MESSAGE_ERROR:
-            self.Music.set_state(gst.STATE_NULL)
+        if t == Gst.MESSAGE_EOS:
+            self.Music.set_state(Gst.STATE_NULL)
+        elif t == Gst.MESSAGE_ERROR:
+            self.Music.set_state(Gst.STATE_NULL)
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
 
@@ -133,7 +151,7 @@ class pykManager:
     def UpdateTempo(self):
         self.Tempo = min(self.Tempo, 2.00)
         self.Tempo = max(self.Tempo, 0.05)
-        #query = gst.query_new_duration (gst.FORMAT_TIME)
+        #query = Gst.query_new_duration (Gst.FORMAT_TIME)
         #if gst_element_query (self.Music, query):
         #    duration = 0
         #    try:
@@ -143,9 +161,9 @@ class pykManager:
         #else:
         #    print "unable to query duration"
 
-        pos = self.Music.query_position(gst.FORMAT_TIME, None)[0]
-        #self.Music.seek(self.Tempo, gst.FORMAT_TIME, gst.SEEK_FLAG_FLUSH | gst.SEEK_FLAG_ACCURATE, gst.SEEK_TYPE_SET, -1, gst.SEEK_TYPE_NONE, gst.CLOCK_TIME_NONE )
-        event = gst.event_new_seek(self.Tempo, gst.FORMAT_TIME, gst.SEEK_FLAG_FLUSH | gst.SEEK_FLAG_ACCURATE, gst.SEEK_TYPE_SET, pos, gst.SEEK_TYPE_NONE, 0 )
+        pos = self.Music.query_position(Gst.FORMAT_TIME, None)[0]
+        #self.Music.seek(self.Tempo, Gst.FORMAT_TIME, Gst.SEEK_FLAG_FLUSH | Gst.SEEK_FLAG_ACCURATE, Gst.SEEK_TYPE_SET, -1, Gst.SEEK_TYPE_NONE, Gst.CLOCK_TIME_NONE )
+        event = Gst.event_new_seek(self.Tempo, Gst.FORMAT_TIME, Gst.SEEK_FLAG_FLUSH | Gst.SEEK_FLAG_ACCURATE, Gst.SEEK_TYPE_SET, pos, Gst.SEEK_TYPE_NONE, 0 )
         if not self.Music.send_event(event):
             print "Tempo SendEvent failed"
         else:

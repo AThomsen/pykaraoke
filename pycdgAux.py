@@ -21,10 +21,7 @@ On the off-chance a C compiler is not available or not reliable for
 some reason, you can use this implementation instead. """
 
 import pygame
-try:
-    import Numeric as N
-except ImportError:
-    import numpy.oldnumeric as N
+import numpy as N
 
 # CDG Command Code
 CDG_COMMAND             = 0x09
@@ -139,13 +136,13 @@ class CdgPacketReader:
         self.__vOffset = 0
         
         # Build a 306x228 array for the pixel indeces, including border area
-        self.__cdgPixelColours = N.zeros((CDG_FULL_WIDTH, CDG_FULL_HEIGHT))
+        self.__cdgPixelColours = N.zeros((CDG_FULL_WIDTH, CDG_FULL_HEIGHT), dtype=int)
 
         # Build a 306x228 array for the actual RGB values. This will
         # be changed by the various commands, and blitted to the
         # screen now and again. But the border area will not be
         # blitted, only the central 288x192 area.
-        self.__cdgSurfarray = N.zeros((CDG_FULL_WIDTH, CDG_FULL_HEIGHT))
+        self.__cdgSurfarray = N.zeros((CDG_FULL_WIDTH, CDG_FULL_HEIGHT), dtype=int)
 
         # Start with all tiles requiring update
         self.__updatedTiles = 0xFFFFFFFFL
@@ -299,12 +296,12 @@ class CdgPacketReader:
         # The most efficient way of setting the values in a Numeric
         # array, is to create a zero array and do addition on the
         # the border and preset slices.
-        self.__cdgPixelColours = N.zeros([CDG_FULL_WIDTH, CDG_FULL_HEIGHT])
+        self.__cdgPixelColours = N.zeros([CDG_FULL_WIDTH, CDG_FULL_HEIGHT], dtype=int)
         self.__cdgPixelColours[:,:] = self.__cdgPixelColours[:,:] + colour
         
         # Now set the border and preset colour in our local surfarray. 
         # This will be blitted next time there is a screen update.
-        self.__cdgSurfarray = N.zeros([CDG_FULL_WIDTH, CDG_FULL_HEIGHT])
+        self.__cdgSurfarray = N.zeros([CDG_FULL_WIDTH, CDG_FULL_HEIGHT], dtype=int)
         self.__cdgSurfarray[:,:] = self.__cdgSurfarray[:,:] + self.__cdgColourTable[colour]
 
         self.__updatedTiles = 0xFFFFFFFFL
@@ -321,13 +318,13 @@ class CdgPacketReader:
         # In this case we are only clearing the border area.
 
         # Set up the border area of the pixel colours array
-        self.__cdgPixelColours[:,:12] = N.zeros([CDG_FULL_WIDTH, 12])
+        self.__cdgPixelColours[:,:12] = N.zeros([CDG_FULL_WIDTH, 12], dtype=int)
         self.__cdgPixelColours[:,:12] = self.__cdgPixelColours[:,:12] + self.__cdgBorderColourIndex
-        self.__cdgPixelColours[:,-12:] = N.zeros([CDG_FULL_WIDTH, 12])
+        self.__cdgPixelColours[:,-12:] = N.zeros([CDG_FULL_WIDTH, 12], dtype=int)
         self.__cdgPixelColours[:,-12:] = self.__cdgPixelColours[:,-12:] + self.__cdgBorderColourIndex
-        self.__cdgPixelColours[:6,12:-12] = N.zeros([6, CDG_FULL_HEIGHT - 24]) 
+        self.__cdgPixelColours[:6,12:-12] = N.zeros([6, CDG_FULL_HEIGHT - 24], dtype=int)
         self.__cdgPixelColours[:6,12:-12] = self.__cdgPixelColours[:6,12:-12] + self.__cdgBorderColourIndex
-        self.__cdgPixelColours[-6:,12:-12] = N.zeros([6, CDG_FULL_HEIGHT - 24]) 
+        self.__cdgPixelColours[-6:,12:-12] = N.zeros([6, CDG_FULL_HEIGHT - 24], dtype=int)
         self.__cdgPixelColours[-6:,12:-12] = self.__cdgPixelColours[-6:,12:-12] + self.__cdgBorderColourIndex
 
         # Now that we have set the PixelColours, apply them to
@@ -404,20 +401,20 @@ class CdgPacketReader:
                 self.__cdgPixelColours = N.concatenate((self.__cdgPixelColours[-hScrollRightPixels:,:], self.__cdgPixelColours[:-hScrollRightPixels,:]), 0)
         elif (copy == False):
             if (vScrollUpPixels > 0):
-                copyBlockActualColour = N.zeros([CDG_FULL_WIDTH,vScrollUpPixels]) + self.__cdgColourTable[colour]
-                copyBlockColourIndex = N.zeros([CDG_FULL_WIDTH,vScrollUpPixels]) + colour
+                copyBlockActualColour = N.zeros([CDG_FULL_WIDTH,vScrollUpPixels], dtype=int) + self.__cdgColourTable[colour]
+                copyBlockColourIndex = N.zeros([CDG_FULL_WIDTH,vScrollUpPixels], dtype=int) + colour
                 self.__cdgPixelColours = N.concatenate((self.__cdgPixelColours[:,vScrollUpPixels:], copyBlockColourIndex), 1)
             elif (vScrollDownPixels > 0):
-                copyBlockActualColour = N.zeros([CDG_FULL_WIDTH,vScrollDownPixels]) + self.__cdgColourTable[colour]
-                copyBlockColourIndex = N.zeros([CDG_FULL_WIDTH,vScrollDownPixels]) + colour
+                copyBlockActualColour = N.zeros([CDG_FULL_WIDTH,vScrollDownPixels], dtype=int) + self.__cdgColourTable[colour]
+                copyBlockColourIndex = N.zeros([CDG_FULL_WIDTH,vScrollDownPixels], dtype=int) + colour
                 self.__cdgPixelColours = N.concatenate((copyBlockColourIndex, self.__cdgPixelColours[:,:-vScrollDownPixels]), 1)
             elif (hScrollLeftPixels > 0):
-                copyBlockActualColour = N.zeros([hScrollLeftPixels, CDG_FULL_HEIGHT]) + self.__cdgColourTable[colour]
-                copyBlockColourIndex = N.zeros([hScrollLeftPixels, CDG_FULL_HEIGHT]) + colour
+                copyBlockActualColour = N.zeros([hScrollLeftPixels, CDG_FULL_HEIGHT], dtype=int) + self.__cdgColourTable[colour]
+                copyBlockColourIndex = N.zeros([hScrollLeftPixels, CDG_FULL_HEIGHT], dtype=int) + colour
                 self.__cdgPixelColours = N.concatenate((self.__cdgPixelColours[hScrollLeftPixels:,:], copyBlockColourIndex), 0)
             elif (hScrollRightPixels > 0):
-                copyBlockActualColour = N.zeros([hScrollRightPixels, CDG_FULL_HEIGHT]) + self.__cdgColourTable[colour]
-                copyBlockColourIndex = N.zeros([hScrollRightPixels, CDG_FULL_HEIGHT]) + colour
+                copyBlockActualColour = N.zeros([hScrollRightPixels, CDG_FULL_HEIGHT], dtype=int) + self.__cdgColourTable[colour]
+                copyBlockColourIndex = N.zeros([hScrollRightPixels, CDG_FULL_HEIGHT], dtype=int) + colour
                 self.__cdgPixelColours = N.concatenate((copyBlockColourIndex, self.__cdgPixelColours[:-hScrollRightPixels,:]), 0)
 
         # Now that we have scrolled the PixelColours, apply them to

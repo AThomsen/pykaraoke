@@ -135,7 +135,7 @@ import sys
 # Windows distribution).
 if not hasattr(sys, 'frozen'):
     import wxversion
-    wxversion.ensureMinimal('2.6')
+    wxversion.ensureMinimal('3.0-gtk3')
 
 import os, string, wx, time, copy, types
 from pykconstants import *

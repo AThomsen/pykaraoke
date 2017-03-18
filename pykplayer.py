@@ -25,9 +25,11 @@ from pykmanager import manager
 from pykenv import env
 import pygame, wx
 import sys
-import pygst, gst
 import types
 import os
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import GObject, Gst
 
 class pykPlayer:
     def __init__(self, song, songDb,
@@ -158,7 +160,7 @@ class pykPlayer:
     def Close(self):
         self.ClearHostLyrics()
         self.State = STATE_CLOSING
-        manager.Music.set_state(gst.STATE_NULL)
+        manager.Music.set_state(Gst.State.NULL)
 
     # you must call Play() to restart. Blocks until pygame is initialised
     def Rewind(self):
@@ -173,7 +175,7 @@ class pykPlayer:
     # the beginning
     def Stop(self):
         self.ClearHostLyrics()
-        manager.Music.set_state(gst.STATE_NULL)
+        manager.Music.set_state(Gst.State.NULL)
         self.Rewind()
             
     # Get the song length (in seconds)
@@ -440,7 +442,7 @@ class pykPlayer:
         # This will be called by the pykManager to shut down the thing
         # immediately.
         self.ClearHostLyrics()
-        manager.Music.set_state(gst.STATE_NULL)
+        manager.Music.set_state(Gst.State.NULL)
 
         # If the caller gave us a callback, let them know we're finished
         if self.State != STATE_CLOSED:

@@ -171,7 +171,10 @@
 # the screen into 24 segments and only update those segments
 # which have actually been updated.
 
-import gst
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import GObject, Gst
+
 from pykconstants import *
 from pykplayer import pykPlayer
 from pykenv import env
@@ -314,18 +317,18 @@ class cdgPlayer(pykPlayer):
 
     def doPlay(self):
         if self.soundFileData:
-            manager.Music.set_state(gst.STATE_PLAYING)
+            manager.Music.set_state(Gst.State.PLAYING)
 
     # Pause the song - Use Pause() again to unpause
     def doPause(self):
         if manager.Music:
-            manager.Music.set_state(gst.STATE_PAUSED)
+            manager.Music.set_state(Gst.State.PAUSED)
             self.PauseStartTime = self.GetPos()
 
     def doUnpause(self):
         if manager.Music:
             self.pauseOffsetTime = self.pauseOffsetTime + (self.GetPos() - self.PauseStartTime)
-            manager.Music.set_state(gst.STATE_PLAYING)
+            manager.Music.set_state(Gst.State.PLAYING)
 
     # you must call Play() to restart. Blocks until pygame is initialised
     def doRewind(self):
@@ -338,11 +341,11 @@ class cdgPlayer(pykPlayer):
         # Move file pointer to the beginning of the file
         self.packetReader.Rewind()
 
-        if manager.Music.get_state() == gst.STATE_PLAYING:
+        if manager.Music.get_state(Gst.CLOCK_TIME_NONE) == Gst.State.PLAYING:
             # Actually stop the audio
-            manager.Music.set_state(gst.STATE_NULL)
+            manager.Music.set_state(Gst.State.NULL)
 
-        manager.Music.seek_simple(gst.FORMAT_TIME, gst.SEEK_FLAG_FLUSH, 0)
+        manager.Music.seek_simple(Gst.Format.TIME, Gst.SeekFlags.FLUSH, 0)
 
     def GetLength(self):
         """Give the number of seconds in the song."""
@@ -374,8 +377,8 @@ class cdgPlayer(pykPlayer):
         # immediately.
 #        if self.soundFileData:
         if manager.Music <> None:
-            if manager.Music.get_state() == gst.STATE_PLAYING:
-                manager.Music.set_state(gst.STATE_NULL)
+            if manager.Music.get_state(Gst.CLOCK_TIME_NONE) == Gst.State.PLAYING:
+                manager.Music.set_state(Gst.State.NULL)
 
         # Make sure our surfaces are deallocated before we call up to
         # CloseDisplay(), otherwise bad things can happen.
