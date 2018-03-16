@@ -70,19 +70,22 @@ class pykManager:
         self.KeyShift = 0
         self.Tempo = 1.00
         self.Music = Gst.Pipeline()
-        self.volume = Gst.ElementFactory.make('volume', )
+        bus = self.Music.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.bus_call)
+        self.volume = Gst.ElementFactory.make("volume", "volume")
         self.pitcher = Gst.ElementFactory.make("pitch")
-        #self.tempoer = Gst.element_factory_make('scaletempo', 'scaletempo')
 
         source = Gst.ElementFactory.make("filesrc", "file-source")
-        decoder = Gst.ElementFactory.make("mad", "mp3-decoder")
+        decoder = Gst.ElementFactory.make("decodebin", "decode")
         conv1 = Gst.ElementFactory.make("audioconvert", "converter")
-        #conv2 = Gst.element_factory_make ("audioconvert", "converter2")
         resample = Gst.ElementFactory.make ("audioresample", "audioresample")
         sink = Gst.ElementFactory.make("autoaudiosink")
 
-        #self.Music.add(source, decoder, conv1, self.tempoer, conv2, resample, self.pitcher, sink)
-        #Gst.element_link_many(source, decoder, conv1, self.tempoer, conv2, resample, self.pitcher, sink)
+        # connecting the decoder's "pad-added" event to a handler: the decoder doesn't yet 
+        # have an output pad (a source), it's created at runtime when the decoders starts receiving some data
+        decoder.connect("pad-added", self.pad_factory(self.volume))
+
         self.Music.add(source)
         self.Music.add(decoder)
         self.Music.add(self.volume)
@@ -92,15 +95,10 @@ class pykManager:
         self.Music.add(sink)
         
         source.link(decoder)
-        decoder.link(self.volume)
         self.volume.link(conv1)
         conv1.link(self.pitcher)
         self.pitcher.link(resample)
         resample.link(sink)
-
-        #bus = self.Music.get_bus()
-        #bus.add_signal_watch()
-        #bus.connect("message", self.on_MusicMsg)
 
         # Find the correct font path. If fully installed on Linux this
         # will be sys.prefix/share/pykaraoke/fonts. Otherwise look for
@@ -124,15 +122,28 @@ class pykManager:
         # or smaller on those players that support it.
         self.fontScale = None
 
+    def pad_factory(self, element):
+        def pad_added(src, pad):
+            target = element.sinkpads[0]
+            pad_name = '%s:%s' % (pad.get_parent_element().name, pad.name)
+            tgt_name = '%s:%s' % (target.get_parent_element().name, target.name)
+            print 'New dynamic pad %s detected on %s. Auto-linking it to %s', pad_name, src.name, tgt_name
+            pad.link(target)
+        return pad_added
+
+
+    def decoder_src_created(self, element, pad):
+        pad.link(self.volume.get_static_pad("volume"))
+
     def LoadMusic(self, MusicFile):
         self.Music.get_by_name("file-source").set_property("location", MusicFile)
 
-    def on_MusicMsg(self, bus, message):
+    def bus_call(self, bus, message):
         t = message.type
-        if t == Gst.MESSAGE_EOS:
-            self.Music.set_state(Gst.STATE_NULL)
-        elif t == Gst.MESSAGE_ERROR:
-            self.Music.set_state(Gst.STATE_NULL)
+        if t == Gst.MessageType.EOS:
+            self.Music.set_state(Gst.State.NULL)
+        elif t == Gst.MessageType.EOS:
+            self.Music.set_state(Gst.State.NULL)
             err, debug = message.parse_error()
             print "Error: %s" % err, debug
 
